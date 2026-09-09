@@ -33,21 +33,9 @@ import kotlin.reflect.full.hasAnnotation
  * [dev.nextftc.robot.opmode.NextFTCOpModeScanner] can properly inject the robot instance into OpModes.
  */
 internal object RobotScanner : Scanner {
-  private var robotClassOrNull: KClass<*>? = null
-  private var robotConstructorOrNull: (() -> NextRobot)? = null
+  private var robotClass: KClass<*>? = null
+  private var robotConstructor: (() -> NextRobot)? = null
   private var robotLoader: ClassLoader? = null
-
-  var robotClass: KClass<*>
-    get() = checkNotNull(robotClassOrNull)
-    private set(value) {
-      robotClassOrNull = value
-    }
-
-  var robotConstructor: () -> NextRobot
-    get() = checkNotNull(robotConstructorOrNull)
-    private set(value) {
-      robotConstructorOrNull = value
-    }
 
   var foundRobot = false
   var foundMultiple = false
@@ -127,15 +115,15 @@ internal object RobotScanner : Scanner {
     Logger.i("NextFTC", "Found NextFTC robot class: $robotClass")
     RobotLog.setGlobalErrorMsg("Found NextFTC robot class: $robotClass")
 
-    RobotState.robot = robotConstructor()
+    RobotState.robotOrNull = robotConstructor!!()
   }
 
   override fun beforeUnload(loader: ClassLoader) {
     if (loader == robotLoader) {
       foundRobot = false
       foundMultiple = false
-      robotClassOrNull = null
-      robotConstructorOrNull = null
+      robotClass = null
+      robotConstructor = null
       robotLoader = null
       RobotState.robotOrNull = null
     }
@@ -144,14 +132,15 @@ internal object RobotScanner : Scanner {
   override fun unload(loader: ClassLoader, cls: Class<*>) {}
 }
 
+/**
+ * Holder for the NextFTC robot class and instance. This is initialized during the [OnCreateEventLoop] phase of the app lifecycle.
+ * The robot instance is created using the constructor found by [RobotScanner].
+ */
 object RobotState : OnCreateEventLoop {
   internal var robotOrNull: NextRobot? = null
 
-  var robot: NextRobot
-    get() = checkNotNull(robotOrNull)
-    internal set(value) {
-      robotOrNull = value
-    }
+  val robot: NextRobot
+    get() = checkNotNull(robotOrNull) { "Cannot access Robot object before it is created" }
 
   override fun onCreateEventLoop(context: Context, ftcEventLoop: FtcEventLoop) {
     ftcEventLoop.opModeManager.registerListener(DriverStationTelemetry)
