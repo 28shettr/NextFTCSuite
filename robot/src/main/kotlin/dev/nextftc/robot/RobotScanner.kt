@@ -100,7 +100,7 @@ internal object RobotScanner : Scanner {
     )
     RobotLog.setGlobalErrorMsg(
       "Unable to find appropriate constructor for $cls. " +
-              "Ensure it is either a singleton object or has a public no-argument constructor.",
+        "Ensure it is either a singleton object or has a public no-argument constructor.",
     )
   }
 
@@ -110,7 +110,7 @@ internal object RobotScanner : Scanner {
     }
     check(foundRobot) {
       "Unable to find a NextFTC robot class. Please ensure that there is one in your project " +
-              "(a class or object implementing NextRobot with a public no-argument constructor)."
+        "(a class or object implementing NextRobot with a public no-argument constructor)."
     }
 
     Logger.i("NextFTC", "Found NextFTC robot class: $robotClass")
