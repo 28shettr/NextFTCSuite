@@ -114,7 +114,12 @@ internal object RobotScanner : Scanner {
     }
   }
 
-  override fun unload(loader: ClassLoader, cls: Class<*>) {}
+  override fun unload(loader: ClassLoader, cls: Class<*>) {
+    if (this::robotClass.isInitialized && cls.kotlin == robotClass) {
+      foundRobot = false
+      foundMultiple = false
+    }
+  }
 }
 
 /**
@@ -128,7 +133,7 @@ object RobotState : OnCreateEventLoop {
   override fun onCreateEventLoop(context: Context, ftcEventLoop: FtcEventLoop) {
     check(RobotScanner.foundRobot) {
       "Unable to find a NextFTC robot class. Please ensure that there is one in your project " +
-        "(a class or object implementing NextRobot with a public no-argument constructor)."
+              "(a class or object implementing NextRobot with a public no-argument constructor)."
     }
     check(!RobotScanner.foundMultiple) {
       "Found multiple NextFTC robot classes. Please ensure that there is only one in your project."
