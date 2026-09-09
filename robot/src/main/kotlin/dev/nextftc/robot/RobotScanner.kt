@@ -14,14 +14,12 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled
 import dev.frozenmilk.sinister.Scanner
 import dev.frozenmilk.sinister.sdk.apphooks.OnCreateEventLoop
 import dev.frozenmilk.sinister.sdk.apphooks.OnCreateEventLoopScanner
-import dev.frozenmilk.sinister.sdk.opmodes.SinisterRegisteredOpModes
 import dev.frozenmilk.sinister.targeting.SearchTarget
 import dev.frozenmilk.sinister.targeting.WideSearch
 import dev.frozenmilk.sinister.util.log.Logger
 import dev.frozenmilk.util.graph.Graph
 import dev.frozenmilk.util.graph.rule.AdjacencyRule
 import dev.frozenmilk.util.graph.rule.dependsOn
-import dev.nextftc.hardware.RobotController
 import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation
@@ -32,14 +30,21 @@ import kotlin.reflect.full.hasAnnotation
  * [dev.nextftc.robot.opmode.NextFTCOpModeScanner] can properly inject the robot instance into OpModes.
  */
 internal object RobotScanner : Scanner {
-  /** The class reference of the user's robot. Null once the class has been unloaded. */
-  var robotClass: KClass<*>? = null
-
-  /** The constructor of the robot class. Null once the class has been unloaded. */
-  var robotConstructor: (() -> NextRobot)? = null
-
-  /** The ClassLoader that held [robotClass], used to detect when it gets unloaded. */
+  private var _robotClass: KClass<*>? = null
+  private var _robotConstructor: (() -> NextRobot)? = null
   private var robotLoader: ClassLoader? = null
+
+  var robotClass: KClass<*>
+    get() = checkNotNull(_robotClass)
+    private set(value) {
+      _robotClass = value
+    }
+
+  var robotConstructor: () -> NextRobot
+    get() = checkNotNull(_robotConstructor)
+    private set(value) {
+      _robotConstructor = value
+    }
 
   var foundRobot = false
   var foundMultiple = false
@@ -112,36 +117,31 @@ internal object RobotScanner : Scanner {
 
     Logger.i("NextFTC", "Found NextFTC robot class: $robotClass")
 
-    val constructor = requireNotNull(robotConstructor) {
-      "NextFTC robot constructor was null despite foundRobot being true — internal RobotScanner bug."
-    }
-    RobotState.robot = constructor()
+    RobotState.robot = robotConstructor()
   }
 
   override fun beforeUnload(loader: ClassLoader) {
     if (loader == robotLoader) {
       foundRobot = false
       foundMultiple = false
-      robotClass = null
-      robotConstructor = null
+      _robotClass = null
+      _robotConstructor = null
       robotLoader = null
-      // NextRobot has no destroy/shutdown hook to call here — dropping the reference
-      // is all that's available. If one gets added to NextRobot, call it here first.
-      RobotState.robot = null
+      RobotState.robotOrNull = null
     }
   }
 
   override fun unload(loader: ClassLoader, cls: Class<*>) {}
 }
 
-/**
- * Holder for the NextFTC robot instance. Populated during [Scanner.afterScan] once
- * [RobotScanner] confirms exactly one [NextRobot] implementation was found, and cleared
- * during [Scanner.beforeUnload] when that class is unloaded.
- */
 object RobotState : OnCreateEventLoop {
-  /** The current instance of the user's robot, or null if unloaded / not yet scanned. */
-  internal var robot: NextRobot? = null
+  internal var robotOrNull: NextRobot? = null
+
+  var robot: NextRobot
+    get() = checkNotNull(robotOrNull)
+    internal set(value) {
+      robotOrNull = value
+    }
 
   override fun onCreateEventLoop(context: Context, ftcEventLoop: FtcEventLoop) {
     ftcEventLoop.opModeManager.registerListener(DriverStationTelemetry)
