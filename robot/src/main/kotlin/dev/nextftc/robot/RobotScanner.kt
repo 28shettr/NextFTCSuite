@@ -15,14 +15,12 @@ import com.qualcomm.robotcore.util.RobotLog
 import dev.frozenmilk.sinister.Scanner
 import dev.frozenmilk.sinister.sdk.apphooks.OnCreateEventLoop
 import dev.frozenmilk.sinister.sdk.apphooks.OnCreateEventLoopScanner
-import dev.frozenmilk.sinister.sdk.opmodes.SinisterRegisteredOpModes
 import dev.frozenmilk.sinister.targeting.SearchTarget
 import dev.frozenmilk.sinister.targeting.WideSearch
 import dev.frozenmilk.sinister.util.log.Logger
 import dev.frozenmilk.util.graph.Graph
 import dev.frozenmilk.util.graph.rule.AdjacencyRule
 import dev.frozenmilk.util.graph.rule.dependsOn
-import dev.nextftc.hardware.RobotController
 import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation
@@ -33,9 +31,12 @@ import kotlin.reflect.full.hasAnnotation
  * [dev.nextftc.robot.opmode.NextFTCOpModeScanner] can properly inject the robot instance into OpModes.
  */
 internal object RobotScanner : Scanner {
-  private var robotClass: KClass<*>? = null
+  private var _robotClass: KClass<*>? = null
   private var robotConstructor: (() -> NextRobot)? = null
   private var robotLoader: ClassLoader? = null
+
+  val robotClass: KClass<*>
+    get() = checkNotNull(_robotClass)
 
   var foundRobot = false
   var foundMultiple = false
@@ -67,7 +68,7 @@ internal object RobotScanner : Scanner {
 
     if (objectInstance != null) {
       robotConstructor = { objectInstance as NextRobot }
-      robotClass = kcls
+      _robotClass = kcls
       robotLoader = loader
 
       if (foundRobot) {
@@ -80,7 +81,7 @@ internal object RobotScanner : Scanner {
     val constructor = kcls.constructors.find { it.parameters.isEmpty() }
     if (constructor != null) {
       robotConstructor = { constructor.call() as NextRobot }
-      robotClass = kcls
+      _robotClass = kcls
       robotLoader = loader
 
       if (foundRobot) {
@@ -99,7 +100,7 @@ internal object RobotScanner : Scanner {
     )
     RobotLog.setGlobalErrorMsg(
       "Unable to find appropriate constructor for $cls. " +
-        "Ensure it is either a singleton object or has a public no-argument constructor.",
+              "Ensure it is either a singleton object or has a public no-argument constructor.",
     )
   }
 
@@ -109,7 +110,7 @@ internal object RobotScanner : Scanner {
     }
     check(foundRobot) {
       "Unable to find a NextFTC robot class. Please ensure that there is one in your project " +
-        "(a class or object implementing NextRobot with a public no-argument constructor)."
+              "(a class or object implementing NextRobot with a public no-argument constructor)."
     }
 
     Logger.i("NextFTC", "Found NextFTC robot class: $robotClass")
@@ -122,7 +123,7 @@ internal object RobotScanner : Scanner {
     if (loader == robotLoader) {
       foundRobot = false
       foundMultiple = false
-      robotClass = null
+      _robotClass = null
       robotConstructor = null
       robotLoader = null
       RobotState.robotOrNull = null
