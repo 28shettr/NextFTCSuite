@@ -11,17 +11,16 @@ package dev.nextftc.robot
 import android.content.Context
 import com.qualcomm.ftccommon.FtcEventLoop
 import com.qualcomm.robotcore.eventloop.opmode.Disabled
+import com.qualcomm.robotcore.util.RobotLog
 import dev.frozenmilk.sinister.Scanner
 import dev.frozenmilk.sinister.sdk.apphooks.OnCreateEventLoop
 import dev.frozenmilk.sinister.sdk.apphooks.OnCreateEventLoopScanner
-import dev.frozenmilk.sinister.sdk.opmodes.SinisterRegisteredOpModes
 import dev.frozenmilk.sinister.targeting.SearchTarget
 import dev.frozenmilk.sinister.targeting.WideSearch
 import dev.frozenmilk.sinister.util.log.Logger
 import dev.frozenmilk.util.graph.Graph
 import dev.frozenmilk.util.graph.rule.AdjacencyRule
 import dev.frozenmilk.util.graph.rule.dependsOn
-import dev.nextftc.hardware.RobotController
 import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
 import kotlin.reflect.full.hasAnnotation
@@ -32,11 +31,12 @@ import kotlin.reflect.full.hasAnnotation
  * [dev.nextftc.robot.opmode.NextFTCOpModeScanner] can properly inject the robot instance into OpModes.
  */
 internal object RobotScanner : Scanner {
-  /** The class reference of the user's robot. */
-  lateinit var robotClass: KClass<*>
+  private var _robotClass: KClass<*>? = null
+  private var robotConstructor: (() -> NextRobot)? = null
+  private var robotLoader: ClassLoader? = null
 
-  /** The constructor of the robot class */
-  lateinit var robotConstructor: () -> NextRobot
+  val robotClass: KClass<*>
+    get() = checkNotNull(_robotClass)
 
   var foundRobot = false
   var foundMultiple = false
@@ -57,16 +57,19 @@ internal object RobotScanner : Scanner {
 
     if (kcls.hasAnnotation<Disabled>()) {
       Logger.i("NextFTC", "Skipping disabled NextFTC robot class: $kcls")
+      RobotLog.setGlobalErrorMsg("Skipping disabled NextFTC robot class: $kcls")
       return
     }
 
     Logger.i("NextFTC", "Found NextFTC robot class: $kcls")
+    RobotLog.setGlobalErrorMsg("Found NextFTC robot class: $kcls")
 
     val objectInstance = kcls.objectInstance
 
     if (objectInstance != null) {
       robotConstructor = { objectInstance as NextRobot }
-      robotClass = kcls
+      _robotClass = kcls
+      robotLoader = loader
 
       if (foundRobot) {
         foundMultiple = true
@@ -78,7 +81,8 @@ internal object RobotScanner : Scanner {
     val constructor = kcls.constructors.find { it.parameters.isEmpty() }
     if (constructor != null) {
       robotConstructor = { constructor.call() as NextRobot }
-      robotClass = kcls
+      _robotClass = kcls
+      robotLoader = loader
 
       if (foundRobot) {
         foundMultiple = true
@@ -94,23 +98,35 @@ internal object RobotScanner : Scanner {
         append("Ensure it is either a singleton object or has a public no-argument constructor.")
       },
     )
+    RobotLog.setGlobalErrorMsg(
+      "Unable to find appropriate constructor for $cls. " +
+        "Ensure it is either a singleton object or has a public no-argument constructor.",
+    )
   }
 
   override fun afterScan(loader: ClassLoader) {
-    if (foundMultiple) {
-      Logger.e(
-        "NextFTC",
-        "Found multiple NextFTC robot classes. Please ensure that there is only one in your project.",
-      )
+    check(!foundMultiple) {
+      "Found multiple NextFTC robot classes. Please ensure that there is only one in your project."
+    }
+    check(foundRobot) {
+      "Unable to find a NextFTC robot class. Please ensure that there is one in your project " +
+        "(a class or object implementing NextRobot with a public no-argument constructor)."
     }
 
-    if (!foundRobot) {
-      Logger.e(
-        "NextFTC",
-        "Unable to find a NextFTC robot class. Please ensure that there is one in your project.",
-      )
-    } else {
-      Logger.i("NextFTC", "Found NextFTC robot class: $robotClass")
+    Logger.i("NextFTC", "Found NextFTC robot class: $robotClass")
+    RobotLog.setGlobalErrorMsg("Found NextFTC robot class: $robotClass")
+
+    RobotState.robotOrNull = robotConstructor!!()
+  }
+
+  override fun beforeUnload(loader: ClassLoader) {
+    if (loader == robotLoader) {
+      foundRobot = false
+      foundMultiple = false
+      _robotClass = null
+      robotConstructor = null
+      robotLoader = null
+      RobotState.robotOrNull = null
     }
   }
 
@@ -122,18 +138,12 @@ internal object RobotScanner : Scanner {
  * The robot instance is created using the constructor found by [RobotScanner].
  */
 object RobotState : OnCreateEventLoop {
-  /** The singleton or freshly constructed instance of the user's robot. */
-  internal lateinit var robot: NextRobot
+  internal var robotOrNull: NextRobot? = null
+
+  val robot: NextRobot
+    get() = checkNotNull(robotOrNull) { "Cannot access Robot object before it is created" }
 
   override fun onCreateEventLoop(context: Context, ftcEventLoop: FtcEventLoop) {
-    check(RobotScanner.foundRobot) {
-      "Unable to find a NextFTC robot class. Please ensure that there is one in your project " +
-        "(a class or object implementing NextRobot with a public no-argument constructor)."
-    }
-    check(!RobotScanner.foundMultiple) {
-      "Found multiple NextFTC robot classes. Please ensure that there is only one in your project."
-    }
-    robot = RobotScanner.robotConstructor()
     ftcEventLoop.opModeManager.registerListener(DriverStationTelemetry)
   }
 }
