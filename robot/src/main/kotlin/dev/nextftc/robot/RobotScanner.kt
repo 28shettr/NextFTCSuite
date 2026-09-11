@@ -62,7 +62,7 @@ internal object RobotScanner : Scanner {
     }
 
     Logger.i("NextFTC", "Found NextFTC robot class: $kcls")
-    RobotLog.setGlobalErrorMsg("Found NextFTC robot class: $kcls")
+//    RobotLog.setGlobalErrorMsg("Found NextFTC robot class: $kcls")
 
     val objectInstance = kcls.objectInstance
 
@@ -98,10 +98,10 @@ internal object RobotScanner : Scanner {
         append("Ensure it is either a singleton object or has a public no-argument constructor.")
       },
     )
-   /* RobotLog.setGlobalErrorMsg(
+    RobotLog.setGlobalErrorMsg(
       "Unable to find appropriate constructor for $cls. " +
         "Ensure it is either a singleton object or has a public no-argument constructor.",
-    )*/
+    )
   }
 
   override fun afterScan(loader: ClassLoader) {
