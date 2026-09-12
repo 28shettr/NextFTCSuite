@@ -6,7 +6,7 @@ kotlin = "2.3.0"
 kotest = "5.9.1"
 sloth = "0.2.4"
 ejml = "0.41"
-ivy = "1.0.1"
+ivy = "1.1.1"
 
 [libraries]
 dokka-mathjax-plugin = { module = "org.jetbrains.dokka:mathjax-plugin" }
