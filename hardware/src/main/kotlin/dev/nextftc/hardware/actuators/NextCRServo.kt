@@ -50,8 +50,7 @@ open class NextCRServo @JvmOverloads constructor(
     cacheTolerance: Double = 0.01,
   ) : this(
     {
-      module.claimPort("servo", port)
-      CRServoImplEx(module.servoController, port, ServoConfigurationType.getStandardServoType())
+      module.crServo(port)
     },
     cacheTolerance,
   ) {

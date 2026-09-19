@@ -8,7 +8,6 @@
 
 package dev.nextftc.hardware.sensors
 
-import com.qualcomm.hardware.lynx.LynxModule
 import com.qualcomm.robotcore.hardware.DigitalChannel
 import com.qualcomm.robotcore.hardware.DigitalChannelImpl
 import dev.nextftc.hardware.RobotController
@@ -57,8 +56,7 @@ class NextDigitalSensor @JvmOverloads constructor(
     inverted: Boolean = true,
   ) : this(
     {
-      module.claimPort("digital", port)
-      DigitalChannelImpl(module.digitalController, port)
+      module.digitalChannel(port)
     },
     inverted,
   ) {

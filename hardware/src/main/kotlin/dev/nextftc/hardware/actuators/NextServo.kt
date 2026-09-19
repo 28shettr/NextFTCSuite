@@ -61,8 +61,7 @@ open class NextServo @JvmOverloads constructor(
     direction: NextMotor.Direction = NextMotor.Direction.FORWARD,
   ) : this(
     {
-      module.claimPort("servo", port)
-      ServoImplEx(module.servoController, port, ServoConfigurationType.getStandardServoType())
+      module.servo(port)
     },
     cacheTolerance,
     direction,

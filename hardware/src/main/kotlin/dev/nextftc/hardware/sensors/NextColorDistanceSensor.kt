@@ -84,11 +84,12 @@ class NextColorDistanceSensor @JvmOverloads constructor(
     hasDistance: Boolean = false,
   ) : this(
     {
-      module.claimPort("i2c", bus)
-      LynxI2cColorRangeSensor(module.i2cController(bus), true)
+      module.colorRangeSensor(bus)
     },
     if (hasDistance) {
-      { LynxI2cColorRangeSensor(module.i2cController(bus), true) as DistanceSensor }
+      {
+        // Same device as the color sensor so allows it to claim same port.
+        LynxI2cColorRangeSensor(module.i2cController(bus), true) as DistanceSensor }
     } else {
       null
     },

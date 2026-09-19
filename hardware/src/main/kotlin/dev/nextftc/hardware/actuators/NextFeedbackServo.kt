@@ -80,8 +80,7 @@ class NextFeedbackServo @JvmOverloads constructor(
     cacheTolerance: Double = 0.01,
   ) : this(
     {
-      module.claimPort("servo", port)
-      ServoImplEx(module.servoController, port, ServoConfigurationType.getStandardServoType())
+      module.servo(port)
     },
     { feedback },
     cacheTolerance,

@@ -80,8 +80,7 @@ class NextMotor @JvmOverloads constructor(
     cacheTolerance: Double = 0.01,
   ) : this(
     {
-      module.claimPort("motor", port)
-      DcMotorImplEx(module.motorController, port)
+      module.motor(port)
     },
     anglePerCount,
     cacheTolerance,

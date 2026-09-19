@@ -32,8 +32,7 @@ class NextPinpoint(initializer: () -> GoBildaPinpointDriver) {
     bus: Int,
   ) : this(
     {
-      module.claimPort("i2c", bus)
-      GoBildaPinpointDriver(module.i2cController(bus), true)
+      module.pinpoint(bus)
     },
   ) {
     require(bus in 0..3) { "Expected bus in range [0, 3], got $bus" }
